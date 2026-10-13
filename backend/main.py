@@ -4,8 +4,20 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
-import models
-from database import engine, get_db
+
+class AgendamentoCreate(BaseModel):
+    pet_id: int
+    servico: str
+    data_hora: datetime
+
+class AgendamentoResponse(AgendamentoCreate):
+    id: int
+    status: str
+
+    class Config:
+        from_attributes = True
+from backend import models
+from backend.database import engine, get_db
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -87,3 +99,18 @@ def criar_pet(pet: PetCreate, db: Session = Depends(get_db)):
 @app.get("/pets/", response_model=List[PetResponse])
 def listar_pets(db: Session = Depends(get_db)):
     return db.query(models.Pet).all()
+@app.post("/agendamentos/", response_model=AgendamentoResponse, status_code=status.HTTP_201_CREATED)
+def criar_agendamento(agendamento: AgendamentoCreate, db: Session = Depends(get_db)):
+    pet = db.query(models.Pet).filter(models.Pet.id == agendamento.pet_id).first()
+    if not pet:
+        raise HTTPException(status_code=404, detail="Pet não encontrado")
+    
+    novo_agendamento = models.Agendamento(**agendamento.model_dump())
+    db.add(novo_agendamento)
+    db.commit()
+    db.refresh(novo_agendamento)
+    return novo_agendamento
+
+@app.get("/agendamentos/", response_model=List[AgendamentoResponse])
+def listar_agendamentos(db: Session = Depends(get_db)):
+    return db.query(models.Agendamento).all()

@@ -75,7 +75,44 @@
       </form>
     </div>
   </div>
+    <h3>Agendar Banho / Tosa</h3>
+    <form id="form-agendamento">
+        <label>Selecione o Pet:</label>
+        <select id="agendamento-pet" required>
+            <option value="">Carregando pets...</option>
+        </select>
 
+        <label>Serviço:</label>
+        <select id="agendamento-servico" required>
+            <option value="Banho">Banho</option>
+            <option value="Tosa">Tosa</option>
+            <option value="Banho e Tosa">Banho e Tosa</option>
+        </select>
+
+        <label>Data e Hora:</label>
+        <input type="datetime-local" id="agendamento-data" required>
+
+        <button type="submit">Cadastrar Agendamento</button>
+    </form>
+    <p id="mensagem-agendamento" style="color: green; margin-top: 10px;"></p>
+</div>
+<div class="card" style="margin-top: 20px; margin-bottom: 20px;">
+    <h3>Agendamentos Realizados</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Pet ID</th>
+                <th>Serviço</th>
+                <th>Data e Hora</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-agendamentos">
+            <tr><td colspan="5">A carregar agendamentos...</td></tr>
+        </tbody>
+    </table>
+</div>
   <!-- Tabela de Registros -->
   <h2>Clientes e Pets Cadastrados</h2>
   <table>
@@ -96,6 +133,44 @@
 
   <script>
     const API_URL = "http://127.0.0.1:8000";
+    // Carregar os pets no select de agendamentos
+    async function carregarPetsParaAgendamento() {
+        try {
+            const response = await fetch(`${API_URL}/pets/`);
+            const pets = await response.json();
+            const select = document.getElementById("agendamento-pet");
+            select.innerHTML = '<option value="">Selecione um pet...</option>';
+            pets.forEach(pet => {
+                select.innerHTML += `<option value="${pet.id}">${pet.name || pet.nome}</option>`;
+            });
+        } catch (error) {
+            console.error("Erro ao carregar pets:", error);
+        }
+    }
+
+    // Enviar o agendamento
+    document.getElementById("form-agendamento").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const pet_id = document.getElementById("agendamento-pet").value;
+        const servico = document.getElementById("agendamento-servico").value;
+        const data_hora = document.getElementById("agendamento-data").value;
+
+        const response = await fetch(`${API_URL}/agendamentos/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pet_id: parseInt(pet_id), servico, data_hora: new Date(data_hora).toISOString() })
+        });
+
+        if (response.ok) {
+            document.getElementById("mensagem-agendamento").innerText = "Agendamento realizado com sucesso!";
+            document.getElementById("form-agendamento").reset();
+        } else {
+            alert("Erro ao realizar agendamento.");
+        }
+    });
+
+    // Chamar a função ao carregar a página
+    carregarPetsParaAgendamento();
 
     async function carregarDados() {
       try {
@@ -213,6 +288,40 @@
     });
 
     carregarDados();
+  // Carregar a lista de agendamentos na tabela
+async function carregarAgendamentos() {
+    try {
+        const response = await fetch(`${API_URL}/agendamentos/`);
+        const agendamentos = await response.json();
+        const tbody = document.getElementById("tabela-agendamentos");
+        
+        if (agendamentos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">Nenhum agendamento encontrado.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = "";
+        agendamentos.forEach(ag => {
+            const dataFormatada = new Date(ag.data_hora).toLocaleString('pt-BR');
+            tbody.innerHTML += `
+                <tr>
+                    <td>${ag.id}</td>
+                    <td>${ag.pet_id}</td>
+                    <td>${ag.servico}</td>
+                    <td>${dataFormatada}</td>
+                    <td>${ag.status}</td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+        document.getElementById("tabela-agendamentos").innerHTML = '<tr><td colspan="5">Erro ao carregar agendamentos.</td></tr>';
+    }
+}
+
+// Chamar a função assim que a página abre
+carregarAgendamentos();
+carregarDados();  
   </script>
 </body>
 </html>

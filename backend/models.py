@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Numeric, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from database import Base
+from .database import Base
 
 class Cliente(Base):
     __tablename__ = "clientes"
@@ -30,3 +30,11 @@ class Pet(Base):
     criado_em = Column(DateTime, default=datetime.utcnow)
 
     dono = relationship("Cliente", back_populates="pets")
+class Agendamento(Base):
+    __tablename__ = "agendamentos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pet_id = Column(Integer, ForeignKey("pets.id", ondelete="CASCADE"), nullable=False)
+    servico = Column(String(50), nullable=False)
+    data_hora = Column(DateTime, nullable=False)
+    status = Column(String(30), default="Agendado")
